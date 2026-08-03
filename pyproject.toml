@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "claims-reference-miner"
+version = "0.1.0"
+description = "Private Claims reference miner for Bronze agent_v1 records."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic>=2",
+    "python-dotenv",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
+[project.scripts]
+claims-reference-miner = "claims_reference_miner.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["claims_reference_miner*"]
