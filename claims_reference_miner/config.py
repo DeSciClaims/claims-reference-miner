@@ -16,6 +16,7 @@ class ReferenceMinerConfig(BaseModel):
     runtime: str = "dspy-react"
     harness: str = ""
     model: str = "openrouter/openai/gpt-5"
+    pdf_reader: str = "pdf-inspector"
     api_key: str | None = None
     api_base: str = "https://openrouter.ai/api/v1"
     temperature: float = 0.0
@@ -49,6 +50,12 @@ class ReferenceMinerConfig(BaseModel):
             runtime=runtime,
             harness=harness,
             model=_reference_model(model_env),
+            pdf_reader=(
+                os.getenv("CLAIMS_REFERENCE_MINER_PDF_READER")
+                or os.getenv("SUBNET_CLAIMS_PDF_READER")
+                or os.getenv("SUBNET_CLAIMS_PDF_EXTRACTION_METHOD")
+                or "pdf-inspector"
+            ),
             api_key=os.getenv("OPENROUTER_API_KEY"),
             api_base=os.getenv("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"),
             temperature=float(os.getenv("CLAIMS_REFERENCE_MINER_TEMPERATURE", "0.0")),

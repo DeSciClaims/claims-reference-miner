@@ -9,6 +9,7 @@ description = "Private Claims reference miner for Bronze agent_v1 records."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "pdf-inspector",
     "pydantic>=2",
     "python-dotenv",
 ]

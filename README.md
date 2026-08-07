@@ -22,6 +22,16 @@ claims-reference-miner \
   --reference-release-id reference-v0
 ```
 
+For PDF input, the default reader is `pdf-inspector`:
+
+```bash
+claims-reference-miner \
+  --pdf /path/to/paper.pdf \
+  --pdf-reader pdf-inspector \
+  --output-dir outputs/paper-001 \
+  --claims-repo ../Claims
+```
+
 For local development without installing the package:
 
 ```bash
@@ -44,6 +54,7 @@ CLAIMS_REFERENCE_PROFILE_ID=reference-agent-v1-strong
 CLAIMS_REFERENCE_MINER_RUNTIME=dspy-react
 CLAIMS_REFERENCE_MINER_HARNESS=dspy-react
 CLAIMS_REFERENCE_MINER_MODEL=openrouter/openai/gpt-5
+CLAIMS_REFERENCE_MINER_PDF_READER=pdf-inspector
 OPENROUTER_API_KEY=...
 ```
 

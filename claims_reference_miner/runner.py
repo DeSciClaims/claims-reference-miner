@@ -36,6 +36,7 @@ def run_reference_miner(
     agent_config.output_dir = config.output_dir
     agent_config.runtime = config.runtime
     agent_config.model = config.model
+    agent_config.pdf_reader = config.pdf_reader
     agent_config.api_key = config.api_key
     agent_config.api_base = config.api_base
     agent_config.temperature = config.temperature
@@ -47,8 +48,9 @@ def run_reference_miner(
         os.environ["CLAIMS_AGENT_INNER_COMMAND"] = config.inner_command
 
     runner = AgentV1Runner(agent_config)
+    paper_override = {"paper_id": config.paper_id} if config.paper_id else None
     if input_kind == "pdf":
-        artifact = runner.run_from_pdf(input_path, output_dir=run_dir)
+        artifact = runner.run_from_pdf(input_path, output_dir=run_dir, paper_override=paper_override)
     elif input_kind == "text":
         artifact = runner.run_from_text(input_path, output_dir=run_dir)
     else:
@@ -112,6 +114,7 @@ def run_reference_miner(
             "harness": harness,
             "model": model,
             "models": models or ([model] if model else []),
+            "pdf_reader": config.pdf_reader,
             "claims_repo": str(claims_repo),
         },
     )

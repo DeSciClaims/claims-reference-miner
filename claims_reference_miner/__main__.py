@@ -24,6 +24,7 @@ def main() -> int:
     parser.add_argument("--runtime", choices=("dspy-react", "langchain-agent", "agent-cli"))
     parser.add_argument("--harness")
     parser.add_argument("--model")
+    parser.add_argument("--pdf-reader", choices=("pdf-inspector", "pypdf", "grobid"))
     parser.add_argument("--inner-command")
     parser.add_argument("--max-agent-iters", type=int)
     parser.add_argument("--log-level", default="INFO")
@@ -55,6 +56,8 @@ def main() -> int:
         config.harness = args.harness
     if args.model:
         config.model = args.model
+    if args.pdf_reader:
+        config.pdf_reader = args.pdf_reader
     if args.inner_command:
         config.inner_command = args.inner_command
     if args.max_agent_iters:
