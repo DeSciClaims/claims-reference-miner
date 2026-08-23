@@ -114,6 +114,7 @@ def run_reference_miner(
             "harness": harness,
             "model": model,
             "models": models or ([model] if model else []),
+            "runtime_metrics": runtime_metrics,
             "pdf_reader": config.pdf_reader,
             "claims_repo": str(claims_repo),
         },
