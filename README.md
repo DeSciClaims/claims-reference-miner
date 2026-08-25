@@ -1,10 +1,10 @@
 # claims-reference-miner
 
-Private Claims reference miner implementation.
+Claims reference miner implementation.
 
 This project produces **Bronze** records for the SN111 Claims validator loop.
-It intentionally lives outside the public `Claims` repo because the reference
-pipeline can use private prompts, stronger models, and internal repair logic.
+It lives outside the main `Claims` repository so the reference release can be
+versioned independently while reusing the canonical public extraction pipeline.
 
 The output contract is public and stable:
 
@@ -41,8 +41,21 @@ PYTHONPATH=. python -m claims_reference_miner \
   --claims-repo ../Claims
 ```
 
-The CLI delegates to the public `miner.agent_v1` runner but applies private
-reference-miner configuration and writes a Bronze manifest.
+The CLI delegates to the public `miner.agent_v1` runner, applies the selected
+reference model/runtime configuration, and writes a Bronze manifest.
+
+## Skill
+
+The reference miner uses the canonical compiler skill from the configured
+`Claims` checkout:
+
+```text
+miner/agent_v1/skills/compiler/SKILL.md
+```
+
+Set `CLAIMS_REFERENCE_MINER_CLAIMS_REPO` or pass `--claims-repo` to identify
+that checkout. `SUBNET_CLAIMS_AGENT_SKILL_DIR` can override the compiler skill
+for controlled experiments; there is no separate private reference skill.
 
 ## Environment
 
