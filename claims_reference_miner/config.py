@@ -29,7 +29,7 @@ class ReferenceMinerConfig(BaseModel):
     @classmethod
     def from_env(cls, *, base_dir: Path | None = None) -> "ReferenceMinerConfig":
         root = base_dir or Path.cwd()
-        default_claims_repo = root.parent / "Claims"
+        default_claims_repo = _default_claims_repo(root)
         runtime = os.getenv("CLAIMS_REFERENCE_MINER_RUNTIME", os.getenv("SUBNET_CLAIMS_AGENT_RUNTIME", "dspy-react"))
         model_env = os.getenv("CLAIMS_REFERENCE_MINER_MODEL")
         inner_command = os.getenv("CLAIMS_REFERENCE_MINER_INNER_COMMAND", os.getenv("CLAIMS_AGENT_INNER_COMMAND", ""))
@@ -65,6 +65,17 @@ class ReferenceMinerConfig(BaseModel):
             cli_command=cli_command,
             inner_command=inner_command,
         )
+
+
+def _default_claims_repo(base_dir: Path) -> Path:
+    cwd = Path.cwd().resolve()
+    sibling = base_dir.resolve().parent / "Claims"
+    for candidate in (cwd, sibling):
+        if (candidate / "miner" / "agent_v1").is_dir() and (
+            candidate / "validator" / "agent_v1"
+        ).is_dir():
+            return candidate
+    return sibling
 
 
 def _reference_model(model_env: str | None) -> str:

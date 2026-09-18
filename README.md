@@ -56,6 +56,8 @@ miner/agent_v1/skills/compiler/SKILL.md
 Set `CLAIMS_REFERENCE_MINER_CLAIMS_REPO` or pass `--claims-repo` to identify
 that checkout. `SUBNET_CLAIMS_AGENT_SKILL_DIR` can override the compiler skill
 for controlled experiments; there is no separate private reference skill.
+Use Python 3.11 or newer; the reference process imports the Claims validator
+runtime and therefore shares its Python requirement.
 
 ## Environment
 
