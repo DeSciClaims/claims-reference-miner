@@ -9,7 +9,7 @@ from typing import Literal
 
 from .config import ReferenceMinerConfig
 from .manifest import BronzeManifest, sha256_file, stable_json_hash
-
+from .release_lock import verify_release_lock
 
 InputKind = Literal["pdf", "text", "artifact_json"]
 
@@ -22,6 +22,7 @@ def run_reference_miner(
     config: ReferenceMinerConfig | None = None,
 ) -> BronzeManifest:
     config = config or ReferenceMinerConfig.from_env(base_dir=Path(__file__).resolve().parents[1])
+    release_lock_sha256 = verify_release_lock(config)
     claims_repo = config.claims_repo.resolve()
     _ensure_claims_importable(claims_repo)
 
@@ -108,6 +109,7 @@ def run_reference_miner(
         artifact_path=str(artifact_path),
         source_payload_path=str(source_payload_path) if source_payload_path.exists() else None,
         metadata={
+            "reference_lock_sha256": release_lock_sha256,
             "input_kind": input_kind,
             "input_path": str(input_path),
             "runtime": config.runtime,

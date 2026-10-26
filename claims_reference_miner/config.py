@@ -10,6 +10,7 @@ from pydantic import BaseModel
 class ReferenceMinerConfig(BaseModel):
     claims_repo: Path
     output_dir: Path
+    release_lock_path: Path | None = None
     paper_id: str = ""
     reference_release_id: str = "reference-v0"
     reference_profile_id: str = "reference-agent-v1-strong"
@@ -27,7 +28,7 @@ class ReferenceMinerConfig(BaseModel):
     inner_command: str = ""
 
     @classmethod
-    def from_env(cls, *, base_dir: Path | None = None) -> "ReferenceMinerConfig":
+    def from_env(cls, *, base_dir: Path | None = None) -> ReferenceMinerConfig:
         root = base_dir or Path.cwd()
         default_claims_repo = _default_claims_repo(root)
         runtime = os.getenv("CLAIMS_REFERENCE_MINER_RUNTIME", os.getenv("SUBNET_CLAIMS_AGENT_RUNTIME", "dspy-react"))
@@ -44,6 +45,8 @@ class ReferenceMinerConfig(BaseModel):
         return cls(
             claims_repo=Path(os.getenv("CLAIMS_REFERENCE_MINER_CLAIMS_REPO", str(default_claims_repo))).expanduser(),
             output_dir=Path(os.getenv("CLAIMS_REFERENCE_MINER_OUTPUT_DIR", str(root / "outputs"))).expanduser(),
+            release_lock_path=(Path(os.environ["CLAIMS_REFERENCE_RELEASE_LOCK"]).expanduser()
+                               if os.getenv("CLAIMS_REFERENCE_RELEASE_LOCK") else None),
             paper_id=os.getenv("CLAIMS_REFERENCE_MINER_PAPER_ID", ""),
             reference_release_id=os.getenv("CLAIMS_REFERENCE_RELEASE_ID", "reference-v0"),
             reference_profile_id=os.getenv("CLAIMS_REFERENCE_PROFILE_ID", "reference-agent-v1-strong"),
@@ -56,8 +59,8 @@ class ReferenceMinerConfig(BaseModel):
                 or os.getenv("SUBNET_CLAIMS_PDF_EXTRACTION_METHOD")
                 or "pdf-inspector"
             ),
-            api_key=os.getenv("OPENROUTER_API_KEY"),
-            api_base=os.getenv("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"),
+            api_key=os.getenv("CLAIMS_INFERENCE_TOKEN") or os.getenv("OPENROUTER_API_KEY"),
+            api_base=os.getenv("CLAIMS_INFERENCE_BASE_URL") or os.getenv("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"),
             temperature=float(os.getenv("CLAIMS_REFERENCE_MINER_TEMPERATURE", "0.0")),
             max_tokens=int(os.getenv("CLAIMS_REFERENCE_MINER_MAX_TOKENS", "32768")),
             max_agent_iters=int(os.getenv("CLAIMS_REFERENCE_MINER_MAX_ITERS", "6")),

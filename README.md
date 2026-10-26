@@ -44,6 +44,19 @@ PYTHONPATH=. python -m claims_reference_miner \
 The CLI delegates to the public `miner.agent_v1` runner, applies the selected
 reference model/runtime configuration, and writes a Bronze manifest.
 
+For a frozen competition release, set `CLAIMS_REFERENCE_RELEASE_LOCK` to a
+JSON file containing `schema_version: claims_reference_release_v1`, the full
+`claims_commit`, and the runtime fields listed in
+`claims_reference_miner/release_lock.py`. The runner checks the Claims commit,
+relevant working tree, model, reader, and inference settings before extraction,
+and records the lock hash in each Bronze manifest. Leave this variable unset
+only for development runs. The actual week-one lock is published after the
+reference model and Claims release are selected.
+
+The reference runner also accepts `CLAIMS_INFERENCE_BASE_URL` and
+`CLAIMS_INFERENCE_TOKEN`. When supplied, these take precedence over direct
+OpenRouter credentials so a reference run can use a scoped Bifrost key.
+
 ## Skill
 
 The reference miner uses the canonical compiler skill from the configured
