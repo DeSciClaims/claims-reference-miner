@@ -29,3 +29,11 @@ def test_reference_prefers_scoped_gateway_key(monkeypatch, tmp_path: Path) -> No
     config = ReferenceMinerConfig.from_env(base_dir=tmp_path)
     assert config.api_key == "paper-key"
     assert config.api_base == "https://gateway.example/v1"
+
+
+def test_default_reference_model_is_pinned_deepseek_v4_flash(monkeypatch, tmp_path: Path) -> None:
+    for key in ("CLAIMS_REFERENCE_MINER_MODEL", "SUBNET_CLAIMS_REFERENCE_MODEL",
+                "OPENROUTER_MODEL"):
+        monkeypatch.delenv(key, raising=False)
+    config = ReferenceMinerConfig.from_env(base_dir=tmp_path)
+    assert config.model == "deepseek/deepseek-v4-flash-0731"

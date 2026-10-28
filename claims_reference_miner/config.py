@@ -16,7 +16,7 @@ class ReferenceMinerConfig(BaseModel):
     reference_profile_id: str = "reference-agent-v1-strong"
     runtime: str = "dspy-react"
     harness: str = ""
-    model: str = "openrouter/openai/gpt-5"
+    model: str = "deepseek/deepseek-v4-flash-0731"
     pdf_reader: str = "pdf-inspector"
     api_key: str | None = None
     api_base: str = "https://openrouter.ai/api/v1"
@@ -86,7 +86,7 @@ def _reference_model(model_env: str | None) -> str:
         return model_env
     if model_env and _is_harness_id(model_env):
         return os.getenv("SUBNET_CLAIMS_REFERENCE_MODEL", "")
-    return os.getenv("SUBNET_CLAIMS_REFERENCE_MODEL", os.getenv("OPENROUTER_MODEL", "openrouter/openai/gpt-5"))
+    return os.getenv("SUBNET_CLAIMS_REFERENCE_MODEL", os.getenv("OPENROUTER_MODEL", "deepseek/deepseek-v4-flash-0731"))
 
 
 def _harness_from_legacy_model(value: str | None) -> str:

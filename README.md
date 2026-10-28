@@ -62,6 +62,8 @@ working tree, reference miner source/build hash, model, reader, and inference
 settings before extraction, and records the lock hash in each Bronze manifest.
 Leave this variable unset only for development runs. The actual week-one lock
 is published after the reference model and Claims release are selected.
+Changing the reference model requires a new release lock and Bronze records;
+an existing locked release remains fixed.
 
 The reference runner also accepts `CLAIMS_INFERENCE_BASE_URL` and
 `CLAIMS_INFERENCE_TOKEN`. When supplied, these take precedence over direct
@@ -91,7 +93,7 @@ CLAIMS_REFERENCE_RELEASE_ID=reference-v0
 CLAIMS_REFERENCE_PROFILE_ID=reference-agent-v1-strong
 CLAIMS_REFERENCE_MINER_RUNTIME=dspy-react
 CLAIMS_REFERENCE_MINER_HARNESS=dspy-react
-CLAIMS_REFERENCE_MINER_MODEL=openrouter/openai/gpt-5
+CLAIMS_REFERENCE_MINER_MODEL=deepseek/deepseek-v4-flash-0731
 CLAIMS_REFERENCE_MINER_PDF_READER=pdf-inspector
 OPENROUTER_API_KEY=...
 ```
@@ -103,6 +105,6 @@ the CLI command, and put the actual external agent command in the inner command:
 CLAIMS_REFERENCE_MINER_RUNTIME=agent-cli
 CLAIMS_REFERENCE_MINER_HARNESS=hermes-cli
 CLAIMS_REFERENCE_MINER_CLI_COMMAND="python -m miner.agent_v1.wrappers.hermes_prompt"
-CLAIMS_REFERENCE_MINER_INNER_COMMAND="hermes chat --provider openrouter -m openai/gpt-5-mini --max-turns 30 -q"
-CLAIMS_REFERENCE_MINER_MODEL=openai/gpt-5-mini
+CLAIMS_REFERENCE_MINER_INNER_COMMAND="hermes chat --provider openrouter -m deepseek/deepseek-v4-flash-0731 --max-turns 30 -q"
+CLAIMS_REFERENCE_MINER_MODEL=deepseek/deepseek-v4-flash-0731
 ```
