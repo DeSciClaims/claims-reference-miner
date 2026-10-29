@@ -69,6 +69,31 @@ The reference runner also accepts `CLAIMS_INFERENCE_BASE_URL` and
 `CLAIMS_INFERENCE_TOKEN`. When supplied, these take precedence over direct
 OpenRouter credentials so a reference run can use a scoped Bifrost key.
 
+## Competition baseline package
+
+The competition worker uses a separate wheel built from this repository and a
+pinned Claims extraction checkout. It carries the canonical `miner.agent_v1`
+code and compiler skill, and accepts the worker's `--request` and `--output`
+arguments. The worker supplies a paper-scoped gateway key at run time; neither
+the upstream OpenRouter key nor a gateway administrator key is packaged.
+
+From `infra/`, build the wheel with the network's reviewed reference profile:
+
+```sh
+PYTHONPATH=../claims-reference-miner python -m claims_reference_miner.competition_build \
+  --claims-repo ../Claims \
+  --profile config/competition/reference-package/testnet.json \
+  --output-dir .local/reference-competition-testnet
+```
+
+The output contains a wheel, a competition
+manifest, and a build receipt with source hashes. Build on Linux with the same
+Python version and architecture as the worker; its offline wheelhouse needs
+the dependencies listed in `infra/templates/competition-worker-requirements.txt`.
+The competition runner uses pinned V4 Flash and the same `agent_v1` extraction
+code, PDF reader, and compiler skill as the Bronze runner. Confirm the profile
+matches the published Bronze release lock before sealing the wheel for a round.
+
 ## Skill
 
 The reference miner uses the canonical compiler skill from the configured
