@@ -100,6 +100,7 @@ def test_entrypoint_runs_once_with_scoped_gateway_and_writes_artifact(
     assert calls[0][0] == pdf
     assert calls[0][3].api_key == "paper-scoped-token"
     assert calls[0][3].api_base == "http://gateway.test/v1"
+    assert calls[0][3].model == "openrouter/openrouter/deepseek/deepseek-v4-flash-0731"
     assert calls[0][3].max_tokens == 8192
     assert json.loads(output.read_text())["metadata"]["reference_release_id"] == "reference-v0"
 

@@ -52,7 +52,9 @@ def run(request_path: Path, output_path: Path) -> None:
 
     config = AgentV1Config.from_env()
     config.runtime = profile["runtime"]
-    config.model = profile["model"]
+    # DSPy/LiteLLM consumes the first provider prefix. Bifrost must receive
+    # openrouter/<catalog-model> so it routes to the configured OpenRouter key.
+    config.model = "openrouter/openrouter/" + profile["model"]
     config.pdf_reader = profile["pdf_reader"]
     config.provider = "openrouter"
     config.api_base = api_base
@@ -74,6 +76,7 @@ def run(request_path: Path, output_path: Path) -> None:
     )
     artifact.metadata["reference_release_id"] = profile["reference_release_id"]
     artifact.metadata["reference_profile_id"] = profile["reference_profile_id"]
+    artifact.metadata["reference_model"] = profile["model"]
     issues = validate_agent_artifact(artifact)
     if issues:
         raise ValueError(f"reference artifact failed validation: {len(issues)} issue(s)")

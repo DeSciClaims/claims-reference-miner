@@ -53,6 +53,7 @@ def _profile(path: Path) -> dict[str, Any]:
         or value.get("runtime") != "dspy-react"
         or value.get("pdf_reader") not in {"pdf-inspector", "pypdf"}
         or not isinstance(value.get("model"), str) or not value["model"]
+        or value["model"].startswith("openrouter/")
         or any(not isinstance(value.get(key), str) or not value[key]
                for key in ("reference_release_id", "reference_profile_id"))
         or any(type(value.get(key)) is not int or not 1 <= value[key] <= 32768
