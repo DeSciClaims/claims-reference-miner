@@ -93,6 +93,8 @@ the dependencies listed in `infra/templates/competition-worker-requirements.txt`
 The competition runner uses pinned V4 Flash and the same `agent_v1` extraction
 code, PDF reader, and compiler skill as the Bronze runner. Confirm the profile
 matches the published Bronze release lock before sealing the wheel for a round.
+Its DSPy adapter sends Bifrost an explicit `openrouter/` provider route while
+keeping the catalog model ID in the manifest and paper key allowance.
 
 ## Skill
 
