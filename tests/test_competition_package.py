@@ -102,7 +102,7 @@ def test_entrypoint_runs_once_with_scoped_gateway_and_writes_artifact(
     assert calls[0][3].api_base == "http://gateway.test/v1"
     assert calls[0][3].model == "openrouter/openrouter/deepseek/deepseek-v4-flash-0731"
     assert calls[0][3].max_tokens == 8192
-    assert json.loads(output.read_text())["metadata"]["reference_release_id"] == "reference-v0"
+    assert json.loads(output.read_text())["metadata"]["reference_release_id"] == json.loads(profile.read_text())["reference_release_id"]
 
     payload = json.loads(request.read_text())
     payload["inference"]["model"] = "deepseek/deepseek-v4.1-flash-1017"
