@@ -110,3 +110,26 @@ def test_entrypoint_runs_once_with_scoped_gateway_and_writes_artifact(
     with pytest.raises(ValueError, match="reference model differs"):
         competition_entrypoint.run(request, output)
     assert len(calls) == 1
+
+
+def test_scientific_build_contains_shared_validator_schema_and_complete_runtime(tmp_path):
+    profile=json.loads(PROFILE.read_text())
+    profile.update(output_schema='scientific_result_v1.1',runtime='dspy-predict',pdf_reader='docling')
+    path=tmp_path/'profile.json';path.write_text(json.dumps(profile))
+    receipt=build(claims_repo=CLAIMS,profile_path=path,output_dir=tmp_path/'dist',build_python=Path(shutil.which('python') or sys.executable),allow_dirty=True)
+    with zipfile.ZipFile(tmp_path/'dist'/receipt['wheel_filename']) as archive:
+        names=archive.namelist()
+        assert 'miner/scientific_result_v1/pipeline.py' in names
+        assert 'validator/scientific_result_v1/engine.py' in names
+        assert any(n.endswith('share/claims/schemas/scientific-result-extraction/v1.1/schema.json') for n in names)
+        assert not any('/examples/' in n or '/outputs/' in n for n in names)
+        info=json.loads(archive.read('claims_reference_miner/competition_build_info.json'))
+        assert 'claims_validation_sha256' in info and 'claims_schema_sha256' in info
+
+
+def test_legacy_sealed_profile_cannot_silently_switch_to_scientific_output(tmp_path,monkeypatch):
+    (tmp_path/'competition_profile.json').write_bytes(PROFILE.read_bytes())
+    monkeypatch.setattr(competition_entrypoint,'files',lambda name:tmp_path)
+    request=tmp_path/'request.json';request.write_text(json.dumps({'output_schema':'scientific_result_v1.1'}))
+    with pytest.raises(ValueError,match='sealed reference profile'):
+        competition_entrypoint.run(request,tmp_path/'output.json')

@@ -71,3 +71,16 @@ def test_reference_source_digest_changes_with_source_and_build_definition(tmp_pa
     assert first != second
     build.write_text("[project]\nname = 'reference-new'\n")
     assert second != reference_miner_source_sha256(tmp_path)
+
+
+@pytest.mark.parametrize('changed',['validator/scientific_result_v1/engine.py','validator/__init__.py','miner/__init__.py'])
+def test_release_lock_covers_shared_validator_and_import_roots(tmp_path,changed):
+    repo=tmp_path/'Claims';repo.mkdir()
+    file=repo/changed;file.parent.mkdir(parents=True,exist_ok=True);file.write_text('version = 1\n')
+    _git(repo,'init','-q');_git(repo,'config','user.email','test@example.org');_git(repo,'config','user.name','Test')
+    _git(repo,'add','.');_git(repo,'commit','-qm','reference')
+    config=ReferenceMinerConfig(claims_repo=repo,output_dir=tmp_path/'outputs',output_schema='scientific_result_v1.1')
+    build_release_lock(config)
+    file.write_text('version = 2\n')
+    with pytest.raises(ValueError,match='clean committed'):
+        build_release_lock(config)

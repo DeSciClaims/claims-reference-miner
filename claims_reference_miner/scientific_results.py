@@ -1,6 +1,7 @@
 """Reference runner for v1.1 JSON/CSV packages; old competition workers stay agent_v1."""
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -13,7 +14,6 @@ def run_scientific_reference(*, input_path: Path, input_kind: str, output_dir: P
                              release_lock_sha256: str | None) -> BronzeManifest:
     from miner.scientific_result_v1.pipeline import extract_pdf
     from miner.scientific_result_v1.runtime import DspyRuntime
-    from miner.scientific_result_v1.validation import validate_package
 
     if input_kind != "pdf" or config.pdf_reader != "docling" or config.runtime != "dspy-predict":
         raise ValueError("scientific_result_v1.1 requires PDF input, docling reader, and dspy-predict runtime")
@@ -35,9 +35,10 @@ def run_scientific_reference(*, input_path: Path, input_kind: str, output_dir: P
     payload = extract_pdf(input_path.resolve(), run_dir, runtime=runtime, paper_id=config.paper_id,
                           supplements=supplements, max_attempts=config.max_repair_attempts,
                           vision=config.scientific_vision)
-    issues = validate_package(payload, run_dir, require_complete=True)
-    if issues:
-        raise ValueError("Reference extraction is not submission-ready; inspect validation_report.json and source coverage")
+    report = validate_reference(payload=payload, run_dir=run_dir, input_path=input_path,
+                                config=config, model_route=model_route)
+    if not report["submission_ready"]:
+        raise ValueError("Reference extraction is not submission-ready; inspect reference-validation/validation_report.json")
     artifact = run_dir / "extraction.json"
     files = [artifact, *(run_dir / table["csv_file"] for table in payload["tables"])]
     package_hashes = {path.name: sha256_file(path) for path in files}
@@ -58,7 +59,30 @@ def run_scientific_reference(*, input_path: Path, input_kind: str, output_dir: P
                   "api_model": model_route or config.model.removeprefix("openrouter/"),
                   "reference_lock_sha256": release_lock_sha256,
                   "package_sha256": package_hash, "package_files": package_hashes,
+                  "validation_report_sha256": sha256_file(run_dir / "reference-validation" / "validation_report.json"),
+                  "validation_schema": report["schema_version"],
                   "supplement_sha256": {path.name: sha256_file(path) for path in supplements}},
     )
     (run_dir / "bronze_manifest.json").write_text(manifest.model_dump_json(indent=2), encoding="utf-8")
     return manifest
+
+
+def validate_reference(*, payload, run_dir, input_path, config, model_route):
+    """Use the shared full gate; reference miners cannot self-certify through preflight."""
+    from validator.scientific_result_v1.engine import validate
+    from validator.scientific_result_v1.sources import SourceBundle
+    from validator.scientific_result_v1.source_review import ReviewRuntime
+    documents = json.loads((run_dir / "source_payload.json").read_text())["documents"]
+    if config.scientific_vision:
+        for index, document in enumerate(documents, 1):
+            document['images'] = [{'path':str(path.resolve()), 'sha256':sha256_file(path),
+                                   'page':int(path.stem.rsplit('-', 1)[-1])}
+                                  for path in sorted((run_dir / 'parsed' / f'S{index:03d}').glob('page-*.png'))]
+    bundle = SourceBundle(config.paper_id, sha256_file(input_path), tuple(documents))
+    runtime = ReviewRuntime(model=config.model, api_key=config.api_key, api_base=config.api_base,
+                            model_route=model_route, max_tokens=config.max_tokens,
+                            reasoning_effort="none", request_deadline=config.scientific_request_deadline,
+                            transport_retries=0)
+    return validate(payload, run_dir, sources=bundle, runtime=runtime, expected_paper_id=config.paper_id,
+                    expected_pdf_sha256=sha256_file(input_path), scope="reference_preflight",
+                    report_dir=run_dir / "reference-validation")

@@ -159,8 +159,9 @@ earlier DSPy inference caches. Add supplied
 PDF supplements with repeated `--supplement` arguments. It produces `extraction.json`
 and table CSVs rather than an ARA `agent_output.json`. A completed Bronze manifest
 hashes both the extraction JSON and all final table CSVs. Incomplete table coverage
-or validation failures prevent Bronze delivery. Source and graphical fidelity still
-require review. The current competition worker/wheel remains `agent_v1` only.
+or validation failures prevent Bronze delivery. The shared source-review gate checks scientific fidelity and leaves unresolved
+items blocked. Default competition profiles remain `agent_v1`; scientific profiles
+require explicit frozen policy and their separately built scientific wheel.
 Add `--vision` when selecting a vision-capable Qwen model. DeepSeek V4 Flash 0731
 uses Docling text, OCR and table structure without image inputs.
 The public OpenRouter endpoint receives the catalog model ID. Custom reference
@@ -180,3 +181,17 @@ Use an empty output directory. This writes Docling structured JSON, Markdown,
 table CSV candidates, a source payload, a snapshot of schema v1.1, and a
 preparation receipt with source/schema hashes and parser metadata. It does not
 certify source coverage or produce a scientific extraction.
+
+Scientific schema 1.1 now uses the shared `Claims/validator/scientific_result_v1`
+validation engine. Reference generation performs source-based DSPy preflight
+before emitting a Bronze manifest; structural preflight alone is insufficient.
+The manifest includes the validation report hash. The trusted coordinator must
+still recompute validation independently.
+
+A scientific competition profile uses the existing profile fields with
+`output_schema: scientific_result_v1.1`, `runtime: dspy-predict` and
+`pdf_reader: docling`. The builder includes the scientific extractor, shared
+validator and schema data, and hashes all three. Legacy sealed profiles cannot
+silently switch formats. Scientific outputs use the JSON/CSV envelope documented
+in `Claims/validator/scientific_result_v1/README.md`; no deployment or existing-round
+format change is performed by this implementation.

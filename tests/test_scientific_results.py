@@ -18,8 +18,13 @@ def install_fake_pipeline(monkeypatch, *, complete=True):
         return payload
     monkeypatch.setitem(sys.modules, "miner.scientific_result_v1.pipeline", SimpleNamespace(extract_pdf=extract_pdf))
     monkeypatch.setitem(sys.modules, "miner.scientific_result_v1.runtime", SimpleNamespace(DspyRuntime=lambda **kwargs: object()))
-    monkeypatch.setitem(sys.modules, "miner.scientific_result_v1.validation", SimpleNamespace(
-        validate_package=lambda *args, **kwargs: [] if complete else [{"code": "V20"}]))
+    def validate_reference(**kwargs):
+        directory = kwargs["run_dir"] / "reference-validation"
+        directory.mkdir()
+        report = {"submission_ready": complete, "schema_version": "claims_scientific_validation_v1"}
+        (directory / "validation_report.json").write_text(json.dumps(report))
+        return report
+    monkeypatch.setattr("claims_reference_miner.scientific_results.validate_reference", validate_reference)
 
 
 def config(tmp_path):

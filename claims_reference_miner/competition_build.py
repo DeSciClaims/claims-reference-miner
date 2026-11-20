@@ -48,10 +48,12 @@ def _git(repo: Path, *args: str) -> str:
 
 def _profile(path: Path) -> dict[str, Any]:
     value = json.loads(path.read_text(encoding="utf-8"))
+    scientific = isinstance(value, dict) and value.get("output_schema") == "scientific_result_v1.1"
+    expected = PROFILE_FIELDS | {"schema_version"} | ({"output_schema"} if scientific else set())
     if (not isinstance(value, dict) or value.get("schema_version") != "claims_reference_competition_profile_v1"
-        or set(value) != PROFILE_FIELDS | {"schema_version"}
-        or value.get("runtime") != "dspy-react"
-        or value.get("pdf_reader") not in {"pdf-inspector", "pypdf"}
+        or set(value) != expected
+        or value.get("runtime") != ("dspy-predict" if scientific else "dspy-react")
+        or value.get("pdf_reader") not in ({"docling"} if scientific else {"pdf-inspector", "pypdf"})
         or not isinstance(value.get("model"), str) or not value["model"]
         or value["model"].startswith("openrouter/")
         or any(not isinstance(value.get(key), str) or not value[key]
@@ -67,15 +69,19 @@ def _profile(path: Path) -> dict[str, Any]:
 def build(*, claims_repo: Path, profile_path: Path, output_dir: Path,
           build_python: Path = Path(sys.executable), allow_dirty: bool = False) -> dict[str, Any]:
     reference_repo = Path(__file__).resolve().parents[1]
-    extraction_dir = claims_repo / "miner" / "agent_v1"
-    if not (extraction_dir / "runner.py").is_file():
-        raise ValueError("Claims checkout has no canonical agent_v1 extractor")
-    if _git(claims_repo, "status", "--porcelain", "--", "miner/agent_v1"):
+    profile = _profile(profile_path)
+    scientific = profile.get("output_schema") == "scientific_result_v1.1"
+    extractor = "scientific_result_v1" if scientific else "agent_v1"
+    extraction_dir = claims_repo / "miner" / extractor
+    if not (extraction_dir / ("pipeline.py" if scientific else "runner.py")).is_file():
+        raise ValueError("Claims checkout has no canonical extractor for this profile")
+    source_paths = ["miner/__init__.py", "miner/"+extractor] + (["validator/__init__.py", "validator/scientific_result_v1", "schemas/scientific-result-extraction/v1.1"] if scientific else [])
+    claims_dirty = bool(_git(claims_repo, "status", "--porcelain", "--", *source_paths))
+    if claims_dirty and (not allow_dirty or not scientific):
         raise ValueError("Claims extraction checkout must be clean")
     reference_dirty = bool(_git(reference_repo, "status", "--porcelain", "--untracked-files=all"))
     if reference_dirty and not allow_dirty:
         raise ValueError("reference miner checkout must be committed before a release build")
-    profile = _profile(profile_path)
     claims_commit = _git(claims_repo, "rev-parse", "HEAD")
     reference_commit = _git(reference_repo, "rev-parse", "HEAD")
     if output_dir.exists():
@@ -91,9 +97,15 @@ def build(*, claims_repo: Path, profile_path: Path, output_dir: Path,
         miner_dir.mkdir()
         shutil.copy2(claims_repo / "miner" / "__init__.py", miner_dir / "__init__.py")
         shutil.copytree(
-            extraction_dir, miner_dir / "agent_v1",
+            extraction_dir, miner_dir / extractor,
             ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pdf", "outputs", ".cache"),
         )
+        if scientific:
+            validator_dir = stage / "validator"
+            validator_dir.mkdir()
+            shutil.copy2(claims_repo / "validator/__init__.py", validator_dir / "__init__.py")
+            shutil.copytree(claims_repo / "validator/scientific_result_v1", validator_dir / "scientific_result_v1", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+            shutil.copytree(claims_repo / "schemas/scientific-result-extraction/v1.1", stage / "schemas/scientific-result-extraction/v1.1", ignore=shutil.ignore_patterns("examples"))
         (package_dir / "competition_profile.json").write_text(
             json.dumps(profile, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8",
         )
@@ -102,10 +114,14 @@ def build(*, claims_repo: Path, profile_path: Path, output_dir: Path,
             "claims_commit": claims_commit,
             "reference_commit": reference_commit,
             "reference_source_clean": not reference_dirty,
+            "claims_source_clean": not claims_dirty,
             "claims_extraction_sha256": _tree_sha256(extraction_dir),
             "reference_source_sha256": _tree_sha256(reference_repo / "claims_reference_miner"),
             "profile_sha256": _sha256(profile_path),
         }
+        if scientific:
+            build_info["claims_validation_sha256"] = _tree_sha256(claims_repo / "validator/scientific_result_v1")
+            build_info["claims_schema_sha256"] = _sha256(claims_repo / "schemas/scientific-result-extraction/v1.1/schema.json")
         (package_dir / "competition_build_info.json").write_text(
             json.dumps(build_info, sort_keys=True, separators=(",", ":")) + "\n", encoding="utf-8",
         )
@@ -121,13 +137,18 @@ requires-python = ">=3.11"
 dependencies = ["dspy==3.1.2", "pdf-inspector==0.2.6", "pydantic>=2,<3"]
 
 [tool.setuptools.packages.find]
-include = ["claims_reference_miner*", "miner*"]
+include = ["claims_reference_miner*", "miner*", "validator*"]
 
 [tool.setuptools.package-data]
 claims_reference_miner = ["competition_profile.json", "competition_build_info.json"]
 "miner.agent_v1" = ["skills/compiler/*.md", "skills/compiler/*.py", "skills/compiler/references/*.md"]
 """, encoding="utf-8",
         )
+        if scientific:
+            project = stage / "pyproject.toml"
+            text = project.read_text().replace('"pdf-inspector==0.2.6"', '"docling>=2,<3", "jsonschema>=4,<5", "python-dotenv", "requests"')
+            text += '\n[tool.setuptools.data-files]\n"share/claims/schemas/scientific-result-extraction/v1.1" = ["schemas/scientific-result-extraction/v1.1/schema.json", "schemas/scientific-result-extraction/v1.1/QUICK_REFERENCE.md"]\n'
+            project.write_text(text)
         output_dir.mkdir(parents=True)
         subprocess.run(
             [str(build_python), "-m", "pip", "wheel", "--no-deps", "--no-build-isolation",

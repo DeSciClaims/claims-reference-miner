@@ -52,6 +52,7 @@ def build_release_lock(config: ReferenceMinerConfig) -> dict:
         changed = subprocess.check_output(
             ["git", "-C", str(repo), "status", "--porcelain", "--",
              "miner/agent_v1", "validator/agent_v1", "miner/scientific_result_v1",
+             "validator/scientific_result_v1", "validator/__init__.py", "miner/__init__.py",
              "schemas/scientific-result-extraction/v1.1", "pyproject.toml", "uv.lock"], text=True,
             stderr=subprocess.DEVNULL,
         ).strip()

@@ -18,6 +18,9 @@ def _object(path: Path) -> dict[str, Any]:
 
 
 def run(request_path: Path, output_path: Path) -> None:
+    request = _object(request_path)
+    if request.get("output_schema") == "scientific_result_v1.1":
+        return run_scientific(request_path, output_path, request)
     import miner.agent_v1 as agent_package
     from miner.agent_v1.artifact_validator import validate_agent_artifact
     from miner.agent_v1.config import AgentV1Config
@@ -93,6 +96,38 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
     run(args.request, args.output)
+
+
+def run_scientific(request_path, output_path, request):
+    profile = json.loads(files("claims_reference_miner").joinpath("competition_profile.json").read_text())
+    if profile.get("output_schema") != "scientific_result_v1.1":
+        raise ValueError("sealed reference profile does not support scientific output")
+    from miner.scientific_result_v1.pipeline import extract_pdf
+    from miner.scientific_result_v1.runtime import DspyRuntime
+    from validator.scientific_result_v1.package import envelope
+    if request.get("schema_version") != "claims_competition_request_v1":
+        raise ValueError("unsupported competition request schema")
+    inference = request["inference"]
+    model = inference["model"]
+    if model != profile["model"] or model not in inference["allowed_models"]:
+        raise ValueError("reference model is outside the worker whitelist")
+    base = os.environ["CLAIMS_INFERENCE_BASE_URL"]
+    key = os.environ["CLAIMS_INFERENCE_TOKEN"]
+    if (not base.startswith(("http://", "https://")) or not key
+        or type(inference.get("max_output_tokens")) is not int or not 1 <= inference["max_output_tokens"] <= 32768
+        or request.get("pdf_path") != "paper.pdf"):
+        raise ValueError("invalid scientific worker gateway, token limit or PDF path")
+    pdf = request_path.parent / request["pdf_path"]
+    if not pdf.is_file():
+        raise ValueError("competition PDF is missing")
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    directory = output_path.parent / "scientific-reference-run"
+    runtime = DspyRuntime(model=model, api_key=key, api_base=base,
+                          model_route="openrouter/"+model.removeprefix("openrouter/"),
+                          reasoning_effort="none", retry_reasoning_effort="low",
+                          max_tokens=min(profile["max_tokens"], inference["max_output_tokens"]), temperature=profile["temperature"], request_deadline=300)
+    payload = extract_pdf(pdf, directory, runtime=runtime, paper_id=request["paper"]["paper_id"], max_attempts=profile["max_repair_attempts"])
+    output_path.write_text(json.dumps(envelope(payload, directory),ensure_ascii=False,allow_nan=False)+"\n")
 
 
 if __name__ == "__main__":
