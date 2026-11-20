@@ -37,3 +37,16 @@ def test_default_reference_model_is_pinned_deepseek_v4_flash(monkeypatch, tmp_pa
         monkeypatch.delenv(key, raising=False)
     config = ReferenceMinerConfig.from_env(base_dir=tmp_path)
     assert config.model == "deepseek/deepseek-v4-flash-0731"
+
+
+def test_scientific_schema_selects_compatible_defaults(monkeypatch, tmp_path):
+    from claims_reference_miner.config import ReferenceMinerConfig
+
+    monkeypatch.setenv("CLAIMS_REFERENCE_MINER_OUTPUT_SCHEMA", "scientific_result_v1.1")
+    for name in ("CLAIMS_REFERENCE_MINER_RUNTIME", "CLAIMS_REFERENCE_MINER_PDF_READER", "SUBNET_CLAIMS_PDF_READER", "SUBNET_CLAIMS_PDF_EXTRACTION_METHOD", "CLAIMS_SCIENTIFIC_RESULT_MODEL"):
+        monkeypatch.delenv(name, raising=False)
+    config = ReferenceMinerConfig.from_env(base_dir=tmp_path)
+    assert config.output_schema == "scientific_result_v1.1"
+    assert config.runtime == "dspy-predict"
+    assert config.pdf_reader == "docling"
+    assert config.model == "deepseek/deepseek-v4-flash-0731"

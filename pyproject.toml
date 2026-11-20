@@ -15,6 +15,9 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+docling = [
+    "docling>=2,<3",
+]
 dev = [
     "pytest",
 ]

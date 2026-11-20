@@ -3,13 +3,19 @@ from __future__ import annotations
 import os
 import shlex
 from pathlib import Path
+from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ReferenceMinerConfig(BaseModel):
     claims_repo: Path
     output_dir: Path
+    output_schema: Literal["agent_v1", "scientific_result_v1.1"] = "agent_v1"
+    scientific_vision: bool = False
+    scientific_request_deadline: float = Field(default=600, gt=0)
+    scientific_reasoning_effort: Literal["none", "low", "high", "max"] = "none"
+    scientific_retry_reasoning_effort: Literal["none", "low", "high", "max"] = "low"
     release_lock_path: Path | None = None
     paper_id: str = ""
     reference_release_id: str = "reference-v0"
@@ -31,8 +37,11 @@ class ReferenceMinerConfig(BaseModel):
     def from_env(cls, *, base_dir: Path | None = None) -> ReferenceMinerConfig:
         root = base_dir or Path.cwd()
         default_claims_repo = _default_claims_repo(root)
-        runtime = os.getenv("CLAIMS_REFERENCE_MINER_RUNTIME", os.getenv("SUBNET_CLAIMS_AGENT_RUNTIME", "dspy-react"))
-        model_env = os.getenv("CLAIMS_REFERENCE_MINER_MODEL")
+        output_schema = os.getenv("CLAIMS_REFERENCE_MINER_OUTPUT_SCHEMA", "agent_v1")
+        scientific = output_schema == "scientific_result_v1.1"
+        runtime = os.getenv("CLAIMS_REFERENCE_MINER_RUNTIME", "dspy-predict" if scientific else os.getenv("SUBNET_CLAIMS_AGENT_RUNTIME", "dspy-react"))
+        model_env = (os.getenv("CLAIMS_SCIENTIFIC_RESULT_MODEL", "deepseek/deepseek-v4-flash-0731")
+                     if scientific else os.getenv("CLAIMS_REFERENCE_MINER_MODEL"))
         inner_command = os.getenv("CLAIMS_REFERENCE_MINER_INNER_COMMAND", os.getenv("CLAIMS_AGENT_INNER_COMMAND", ""))
         cli_command = shlex.split(os.getenv("CLAIMS_REFERENCE_MINER_CLI_COMMAND", ""))
         harness = (
@@ -43,6 +52,11 @@ class ReferenceMinerConfig(BaseModel):
             or (runtime if runtime != "agent-cli" else "")
         )
         return cls(
+            output_schema=output_schema,
+            scientific_request_deadline=float(os.getenv("CLAIMS_SCIENTIFIC_RESULT_REQUEST_DEADLINE", "600")),
+            scientific_retry_reasoning_effort=os.getenv("CLAIMS_SCIENTIFIC_RESULT_RETRY_REASONING_EFFORT", "low"),
+            scientific_reasoning_effort=os.getenv("CLAIMS_SCIENTIFIC_RESULT_REASONING_EFFORT", "none"),
+            scientific_vision=os.getenv("CLAIMS_SCIENTIFIC_RESULT_VISION", "").strip().lower() in {"1", "true", "yes"},
             claims_repo=Path(os.getenv("CLAIMS_REFERENCE_MINER_CLAIMS_REPO", str(default_claims_repo))).expanduser(),
             output_dir=Path(os.getenv("CLAIMS_REFERENCE_MINER_OUTPUT_DIR", str(root / "outputs"))).expanduser(),
             release_lock_path=(Path(os.environ["CLAIMS_REFERENCE_RELEASE_LOCK"]).expanduser()
@@ -57,7 +71,7 @@ class ReferenceMinerConfig(BaseModel):
                 os.getenv("CLAIMS_REFERENCE_MINER_PDF_READER")
                 or os.getenv("SUBNET_CLAIMS_PDF_READER")
                 or os.getenv("SUBNET_CLAIMS_PDF_EXTRACTION_METHOD")
-                or "pdf-inspector"
+                or ("docling" if scientific else "pdf-inspector")
             ),
             api_key=os.getenv("CLAIMS_INFERENCE_TOKEN") or os.getenv("OPENROUTER_API_KEY"),
             api_base=os.getenv("CLAIMS_INFERENCE_BASE_URL") or os.getenv("OPENROUTER_API_BASE", "https://openrouter.ai/api/v1"),

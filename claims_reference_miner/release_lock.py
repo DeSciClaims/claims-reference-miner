@@ -18,6 +18,11 @@ LOCK_FIELDS = (
 )
 
 
+def _lock_fields(config: ReferenceMinerConfig) -> tuple[str, ...]:
+    # Existing agent_v1 locks retain their original field contract.
+    return LOCK_FIELDS + (("output_schema", "scientific_vision", "scientific_reasoning_effort", "scientific_retry_reasoning_effort", "scientific_request_deadline") if config.output_schema != "agent_v1" else ())
+
+
 def reference_miner_source_sha256(root: Path | None = None) -> str:
     """Hash the installed reference runner and build definition by relative path."""
     root = root or Path(__file__).resolve().parents[1]
@@ -46,7 +51,8 @@ def build_release_lock(config: ReferenceMinerConfig) -> dict:
         ).strip()
         changed = subprocess.check_output(
             ["git", "-C", str(repo), "status", "--porcelain", "--",
-             "miner/agent_v1", "validator/agent_v1"], text=True,
+             "miner/agent_v1", "validator/agent_v1", "miner/scientific_result_v1",
+             "schemas/scientific-result-extraction/v1.1", "pyproject.toml", "uv.lock"], text=True,
             stderr=subprocess.DEVNULL,
         ).strip()
     except (OSError, subprocess.CalledProcessError) as exc:
@@ -57,7 +63,7 @@ def build_release_lock(config: ReferenceMinerConfig) -> dict:
         "schema_version": "claims_reference_release_v1",
         "claims_commit": commit,
         "reference_miner_source_sha256": reference_miner_source_sha256(),
-        **{field: getattr(config, field) for field in LOCK_FIELDS},
+        **{field: getattr(config, field) for field in _lock_fields(config)},
     }
 
 
@@ -71,12 +77,14 @@ def verify_release_lock(config: ReferenceMinerConfig) -> str | None:
         raise ValueError("reference release lock is missing or invalid") from exc
     if not isinstance(lock, dict) or lock.get("schema_version") != "claims_reference_release_v1":
         raise ValueError("reference release lock has the wrong schema")
+    if lock.get("output_schema", "agent_v1") != config.output_schema:
+        raise ValueError("reference output schema differs from release lock")
     commit = lock.get("claims_commit")
     if not isinstance(commit, str) or not re.fullmatch(r"[0-9a-f]{40}", commit):
         raise ValueError("reference release lock needs a full Claims commit")
     if lock.get("reference_miner_source_sha256") != reference_miner_source_sha256():
         raise ValueError("reference miner source differs from release lock")
-    expected = {field: getattr(config, field) for field in LOCK_FIELDS}
+    expected = {field: getattr(config, field) for field in _lock_fields(config)}
     if any(lock.get(field) != value for field, value in expected.items()):
         raise ValueError("reference runtime differs from release lock")
     if build_release_lock(config)["claims_commit"] != commit:

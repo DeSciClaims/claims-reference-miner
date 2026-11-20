@@ -135,3 +135,48 @@ CLAIMS_REFERENCE_MINER_CLI_COMMAND="python -m miner.agent_v1.wrappers.hermes_pro
 CLAIMS_REFERENCE_MINER_INNER_COMMAND="hermes chat --provider openrouter -m deepseek/deepseek-v4-flash-0731 --max-turns 30 -q"
 CLAIMS_REFERENCE_MINER_MODEL=deepseek/deepseek-v4-flash-0731
 ```
+
+## Scientific result schema v1.1
+
+Install the Claims checkout with its `scientific-results` extra and this checkout
+with its `docling` extra in the same Python environment. To extract directly into
+schema v1.1 using Docling and DeepSeek V4 Flash:
+
+```sh
+claims-reference-miner \
+  --claims-repo ../Claims \
+  --pdf /path/to/paper.pdf --paper-id P001 \
+  --output-schema scientific_result_v1.1 \
+  --model deepseek/deepseek-v4-flash-0731 \
+  --output-dir outputs/scientific-results-paper
+```
+
+The new mode selects the `dspy-predict` runtime and `docling` reader. Its DSPy
+Module/Predict stages preserve the original extraction prompts and JSON inputs
+through a custom adapter, without signature wrappers or added null instructions.
+Runtime version 2 records the exact model-facing requests and prevents reuse of
+earlier DSPy inference caches. Add supplied
+PDF supplements with repeated `--supplement` arguments. It produces `extraction.json`
+and table CSVs rather than an ARA `agent_output.json`. A completed Bronze manifest
+hashes both the extraction JSON and all final table CSVs. Incomplete table coverage
+or validation failures prevent Bronze delivery. Source and graphical fidelity still
+require review. The current competition worker/wheel remains `agent_v1` only.
+Add `--vision` when selecting a vision-capable Qwen model. DeepSeek V4 Flash 0731
+uses Docling text, OCR and table structure without image inputs.
+The public OpenRouter endpoint receives the catalog model ID. Custom reference
+endpoints are treated as OpenRouter-backed inference gateways and receive the
+explicit `openrouter/` provider route, consistent with the competition adapter.
+
+For parser-only development without inference or Bronze delivery:
+
+```sh
+python -m claims_reference_miner.prepare_scientific_results \
+  --claims-repo ../Claims \
+  --pdf /path/to/paper.pdf \
+  --output-dir outputs/scientific-results-source
+```
+
+Use an empty output directory. This writes Docling structured JSON, Markdown,
+table CSV candidates, a source payload, a snapshot of schema v1.1, and a
+preparation receipt with source/schema hashes and parser metadata. It does not
+certify source coverage or produce a scientific extraction.

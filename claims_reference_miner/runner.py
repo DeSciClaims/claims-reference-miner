@@ -20,11 +20,25 @@ def run_reference_miner(
     input_kind: InputKind,
     output_dir: Path | None = None,
     config: ReferenceMinerConfig | None = None,
+    supplements: list[Path] | None = None,
 ) -> BronzeManifest:
     config = config or ReferenceMinerConfig.from_env(base_dir=Path(__file__).resolve().parents[1])
     release_lock_sha256 = verify_release_lock(config)
     claims_repo = config.claims_repo.resolve()
     _ensure_claims_importable(claims_repo)
+
+    if config.output_schema == "scientific_result_v1.1":
+        from .scientific_results import run_scientific_reference
+        return run_scientific_reference(
+            input_path=input_path, input_kind=input_kind, output_dir=output_dir,
+            config=config, supplements=supplements or [], release_lock_sha256=release_lock_sha256,
+        )
+    if config.pdf_reader == "docling" or config.scientific_vision:
+        raise ValueError("Docling and page-image inputs require scientific_result_v1.1 output")
+    if config.runtime == "dspy-predict":
+        raise ValueError("dspy-predict requires scientific_result_v1.1 output")
+    if supplements:
+        raise ValueError("Supplement inputs require scientific_result_v1.1 output")
 
     from miner.agent_v1.config import AgentV1Config
     from miner.agent_v1.runner import AgentV1Runner
