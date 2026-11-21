@@ -195,3 +195,10 @@ validator and schema data, and hashes all three. Legacy sealed profiles cannot
 silently switch formats. Scientific outputs use the JSON/CSV envelope documented
 in `Claims/validator/scientific_result_v1/README.md`; no deployment or existing-round
 format change is performed by this implementation.
+
+Use [`profiles/scientific-v1.1.json`](profiles/scientific-v1.1.json) with
+`claims_reference_miner.competition_build --claims-repo ../Claims --profile
+profiles/scientific-v1.1.json --output-dir dist/scientific`. The package runs
+Docling on the supplied PDF inside the offline worker. The worker supplies parser
+weights and an offline wheelhouse; challengers may use this implementation or
+another parser. The validator independently parses the supplied PDF with Docling.

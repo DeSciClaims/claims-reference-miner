@@ -147,6 +147,7 @@ claims_reference_miner = ["competition_profile.json", "competition_build_info.js
         if scientific:
             project = stage / "pyproject.toml"
             text = project.read_text().replace('"pdf-inspector==0.2.6"', '"docling>=2,<3", "jsonschema>=4,<5", "python-dotenv", "requests"')
+            text = text.replace('[tool.setuptools.package-data]', '[tool.setuptools.package-data]\n"validator.scientific_result_v1.source_tasks" = ["*.txt", "*.json", "*.md"]')
             text += '\n[tool.setuptools.data-files]\n"share/claims/schemas/scientific-result-extraction/v1.1" = ["schemas/scientific-result-extraction/v1.1/schema.json", "schemas/scientific-result-extraction/v1.1/QUICK_REFERENCE.md"]\n'
             project.write_text(text)
         output_dir.mkdir(parents=True)

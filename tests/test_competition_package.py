@@ -121,6 +121,9 @@ def test_scientific_build_contains_shared_validator_schema_and_complete_runtime(
         names=archive.namelist()
         assert 'miner/scientific_result_v1/pipeline.py' in names
         assert 'validator/scientific_result_v1/engine.py' in names
+        assert 'validator/scientific_result_v1/source_tasks/extraction_schema.json' in names
+        assert 'validator/scientific_result_v1/source_tasks/source_card.txt' in names
+        assert 'validator/scientific_result_v1/source_tasks/source_card_consolidate.txt' in names
         assert any(n.endswith('share/claims/schemas/scientific-result-extraction/v1.1/schema.json') for n in names)
         assert not any('/examples/' in n or '/outputs/' in n for n in names)
         info=json.loads(archive.read('claims_reference_miner/competition_build_info.json'))
