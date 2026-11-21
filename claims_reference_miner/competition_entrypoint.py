@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 from importlib.resources import files
@@ -126,8 +127,20 @@ def run_scientific(request_path, output_path, request):
                           model_route="openrouter/"+model.removeprefix("openrouter/"),
                           reasoning_effort="none", retry_reasoning_effort="low",
                           max_tokens=min(profile["max_tokens"], inference["max_output_tokens"]), temperature=profile["temperature"], request_deadline=300)
-    payload = extract_pdf(pdf, directory, runtime=runtime, paper_id=request["paper"]["paper_id"], max_attempts=profile["max_repair_attempts"])
-    output_path.write_text(json.dumps(envelope(payload, directory),ensure_ascii=False,allow_nan=False)+"\n")
+    supplements=[]
+    manifest_file=request.get("source_manifest_file")
+    if manifest_file is not None:
+        manifest_path=request_path.parent/manifest_file
+        if manifest_file!="sources.json" or manifest_path.is_symlink():raise ValueError("Invalid source manifest")
+        source_manifest=json.loads(manifest_path.read_text())
+        for source in source_manifest["sources"]:
+            if source["path"]=="paper.pdf":continue
+            path=request_path.parent/source["path"]
+            if path.name!=source["path"] or path.is_symlink() or source["media_type"]!="application/pdf":raise ValueError("Reference scientific parser requires local PDF sources")
+            if hashlib.sha256(path.read_bytes()).hexdigest()!=source["sha256"]:raise ValueError("Supplied supplement hash mismatch")
+            supplements.append(path)
+    payload = extract_pdf(pdf, directory, runtime=runtime, paper_id=request["paper"]["paper_id"], supplements=supplements, max_attempts=profile["max_repair_attempts"])
+    output_path.write_text(json.dumps(envelope(payload, directory, original_json=directory / "extraction.json"),ensure_ascii=False,allow_nan=False)+"\n")
 
 
 if __name__ == "__main__":
